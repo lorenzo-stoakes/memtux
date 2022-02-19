@@ -114,4 +114,7 @@ disable thermal thermal_hwmon thermal_writable_trips thermal_default_gov_step_wi
 disable suspend hibernation pm pm_sleep pm_sleep_smp hibernation_snapshot_dev suspend_freezer \
 	hibernate_callbacks pm_debug pm_sleep_debug pm_trace pm_trace_rtc pm_clk x86_intel_pstate
 
+# Enable DAMON
+enable damon
+
 make olddefconfig
