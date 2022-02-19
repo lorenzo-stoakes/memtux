@@ -1,0 +1,117 @@
+#!/bin/bash
+set -e; set -o pipefail
+
+function enable()
+{
+	for conf in $@; do
+		scripts/config -e $conf
+	done
+}
+
+function disable()
+{
+	for conf in $@; do
+		scripts/config -d $conf
+	done
+}
+
+# See https://stackoverflow.com/a/246128
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+cd "$script_dir"/../linux
+
+make defconfig
+
+# Extra version info.
+enable localversion_auto
+
+# Useful.
+enable devtmpfs
+
+enable tmpfs tmpfs_posix_acl tmpfs_xattr tmpfs_inode64
+
+# Required for systemd.
+enable fhandle
+
+# virtio.
+enable virtio_pci virtio_mmio virtio_blk virtio_net virtio_console \
+       virtio_pci_legacy virtio_input virtio_mmio_cmdline_devices
+disable hw_random_virtio virtio_balloon drm_virtio_gpu crypto_dev_virtio
+
+# Debugging.
+enable debug_info debug_info_split debug_info_dwarf4 gdb_scripts frame_pointer
+disable debug_info_reduced debug_rodata debug_info_compressed debug_stack_usage audit
+
+# Add /proc/config.gz.
+enable ikconfig ikconfig_proc
+
+# Avoid legacy hotplug.
+# Taken with thanks from http://unix.stackexchange.com/a/116888.
+scripts/config --set-str uevent_helper_path ""
+
+# Set kernel localversion to differentiate.
+scripts/config --set-str localversion ".memtux"
+
+# Enable PSI
+enable psi
+disable psi_default_disabled
+
+# Networking.
+enable tun
+disable cfg80211 wlan
+disable net_vendor_3com net_vendor_adaptec net_vendor_agere net_vendor_alacritech net_vendor_alteon net_vendor_amazon \
+	net_vendor_amd net_vendor_aquantia net_vendor_arc net_vendor_asix net_vendor_atheros net_vendor_broadcom tigon3 \
+	tigon3_hwmon net_vendor_brocade net_vendor_cadence net_vendor_cavium net_vendor_chelsio net_vendor_cisco \
+	net_vendor_cortina net_vendor_dec net_tulip net_vendor_dlink net_vendor_emulex net_vendor_ezchip net_vendor_google \
+	net_vendor_huawei net_vendor_i825xx
+disable net_vendor_microsoft net_vendor_litex net_vendor_marvell sky2 net_vendor_mellanox net_vendor_micrel \
+	net_vendor_microchip net_vendor_microsemi net_vendor_myri net_vendor_natsemi net_vendor_neterion \
+	net_vendor_netronome net_vendor_ni net_vendor_8390 net_vendor_nvidia forcedeth net_vendor_oki \
+	net_vendor_packet_engines net_vendor_pensando net_vendor_qlogic net_vendor_qualcomm \
+	net_vendor_rdc net_vendor_realtek 8139too 8139too_pio r8169 net_vendor_renesas \
+	net_vendor_rocker net_vendor_samsung net_vendor_seeq net_vendor_solarflare \
+	net_vendor_silan net_vendor_sis net_vendor_smsc net_vendor_socionext net_vendor_stmicro \
+	net_vendor_sun net_vendor_synopsys net_vendor_tehuti net_vendor_ti net_vendor_via \
+	net_vendor_wiznet net_vendor_xilinx realtek_phy
+
+# We don't need sound.
+disable sound
+
+# We don't need graphics.
+disable drm agp intel_gtt backlight_class_device
+
+# We don't need USB support.
+disable usb usb_support usb_ohci_little_endian usb_pci
+
+# Disable unnecessary bridge support.
+disable yenta yenta_o2 yenta_ricoh yenta_ti yenta_ene_tune yenta_toshiba
+disable pccard pccard_nonstatic pcmcia pcmcia_load_cis cardbus
+
+# Disable unneeded HID stuff.
+disable hid hidraw hid_generic hid_a4tech hid_apple hid_belkin hid_cherry hid_cypress \
+	hid_ezkey hid_gyration hid_ite hid_kensington hid_redragon hid_microsoft hid_monterey \
+	hid_pantherlord hid_pantherlord_ff hid_pentalynx hid_sunplus hid_topseed
+
+# Disable unneeded FS stuff.
+disable scsi_proc_fs blk_dev_sd blk_dev_sr chr_dev_sg blk_dev_bsg \
+	scsi_constants scsi_spi_attrs
+
+# Don't need CD-ROM support.
+disable cdrom
+
+# Remove reliance on firewire.
+disable provide_ohci1394_dma_init
+
+# Disable ACPI.
+disable acpi
+
+# Disable thermal support.
+disable thermal thermal_hwmon thermal_writable_trips thermal_default_gov_step_wise \
+	thermal_writable_trips thermal_default_gov_step_wise thermal_gov_step_wise \
+	thermal_gov_user_space x86_thermal_vector x86_pkg_temp_thermal \
+	x86_thermal_vector #acpi_cpu_freq_pss acpi_thermal acpi_processor
+
+# Disable unneeded power management.
+disable suspend hibernation pm pm_sleep pm_sleep_smp hibernation_snapshot_dev suspend_freezer \
+	hibernate_callbacks pm_debug pm_sleep_debug pm_trace pm_trace_rtc pm_clk x86_intel_pstate
+
+make olddefconfig
