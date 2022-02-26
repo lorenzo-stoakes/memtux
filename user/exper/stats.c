@@ -26,7 +26,7 @@ struct mem_stats *get_mem_stats(struct mem_stats *stats)
 // Attempt to parse smaps field from `buf` and place in appropriate field in
 // `stats`. If the format is not as expected or unable to parse, returns false,
 // otherwise returns true.
-static bool parse_smaps_field(const char *buf, struct smaps_rollup *stats)
+static bool parse_smaps_field(const char *buf, struct smaps_entry *stats)
 {
 	char prefix[256];
 	int val;
@@ -69,7 +69,7 @@ static bool parse_smaps_field(const char *buf, struct smaps_rollup *stats)
 }
 
 // Read smaps fields from `fp` stream into `stats`.
-static void read_smaps_rollup_fields(FILE *fp, struct smaps_rollup *stats)
+static void read_smaps_rollup_fields(FILE *fp, struct smaps_entry *stats)
 {
 	// Arbitrary sizes, we're into buffer overfow territory here...
 	char line[256];
@@ -89,7 +89,7 @@ static void read_smaps_rollup_fields(FILE *fp, struct smaps_rollup *stats)
 	}
 }
 
-struct smaps_rollup *get_smaps_rollup(struct smaps_rollup *stats)
+struct smaps_entry *get_smaps_rollup(struct smaps_entry *stats)
 {
 	// Reset stats to zero.
 	memset(stats, 0, sizeof(*stats));
@@ -123,7 +123,7 @@ void print_rss_stats(const char *prefix, bool show_delta)
 	else
 		printf(",        ");
 
-	struct smaps_rollup smaps_stats;
+	struct smaps_entry smaps_stats;
 	int smaps_rss = get_smaps_rollup(&smaps_stats)->rss;
 	smaps_rss *= 1024;          // -> bytes
 	smaps_rss /= getpagesize(); // -> pages

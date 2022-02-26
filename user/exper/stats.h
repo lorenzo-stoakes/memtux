@@ -13,14 +13,16 @@ struct mem_stats {
 	int dt;       // Number of dirty pages.
 };
 
-// Represents process memory statistics obtained from /proc/[pid]/smaps_rollup
-// (ignoring the rolled up header line).
-struct smaps_rollup {
+// Represents either memory statistics obtained from /proc/[pid]/smaps_rollup or
+// an entry in /proc/[pid]/smaps.
+struct smaps_entry {
 	int rss;              // Resident Set Size (RSS) in KiB.
 	int pss;              // Proportional Set Size (PSS) in KiB.
+	//    smaps_rollup only ->
 	int pss_anon;         // PSS anonymous pages in KiB.
 	int pss_file;         // PSS file pages in KiB.
 	int pss_shmem;        // PSS shared memory pages in KiB.
+	// <- smaps_rollup only
 	int shared_clean;     // Shared clean (synced to disk) pages in KiB.
 	int shared_dirty;     // Shared dirty (modified, not synced to disk) pages in KiB.
 	int private_clean;    // Private clean pages in KiB.
@@ -43,7 +45,7 @@ struct smaps_rollup {
 struct mem_stats *get_mem_stats(struct mem_stats *stats);
 
 // Retrieve rolled up smaps statistics.
-struct smaps_rollup *get_smaps_rollup(struct smaps_rollup *stats);
+struct smaps_entry *get_smaps_rollup(struct smaps_entry *stats);
 
 // Retrieve rolled up smaps RSS value in pages.
 int get_smaps_rss_pages(void);
