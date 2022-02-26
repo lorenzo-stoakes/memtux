@@ -76,7 +76,7 @@ static void read_smaps_rollup_fields(FILE *fp, struct smaps_entry *stats)
 
 	// Skip top line.
 	if (fgets(line, sizeof(line), fp) == NULL) {
-		fprintf(stderr, "Cannot read line.\n");
+		fprintf(stderr, "Cannot read header.\n");
 		exit(EXIT_FAILURE);
 	}
 
