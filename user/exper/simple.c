@@ -18,9 +18,15 @@ static void simple_mmap(size_t size)
 	printf("\n[mapping/unmapping %lu bytes (%lu pages, %lu KiB)]\n\n", size,
 	       num_pages, num_kib);
 
+	// Gather initial statistics.
+	struct mem_stats mem_stats;
+	int prev_rss = get_mem_stats(&mem_stats)->resident;
 	struct smaps_stats stats;
 	get_smaps_stats(&stats);
 	struct smaps_stats prev_stats = stats;
+	struct smaps_entry rollup_stats;
+	get_smaps_rollup(&rollup_stats);
+	struct smaps_entry prev_rollup_stats = rollup_stats;
 
 	uint *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE,
@@ -29,16 +35,33 @@ static void simple_mmap(size_t size)
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
+
+	// Output post-mapping stats.
+	int rss = get_mem_stats(&mem_stats)->resident;
+	printf("[statm] after alloc/rss=%d (%+4d)\n",
+	       rss, rss - prev_rss);
+	prev_rss = rss;
 	get_smaps_stats(&stats);
-	print_smaps_stats("after alloc", &stats, &prev_stats);
+	print_smaps_stats("[smap]  after alloc", &stats, &prev_stats);
 	prev_stats = stats;
+	get_smaps_rollup(&rollup_stats);
+	print_smaps_entry("[smapr] after alloc", &rollup_stats, &prev_rollup_stats);
+	prev_rollup_stats = rollup_stats;
 
 	if (munmap(addr, size)) {
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
+
+	// Output post-unmapping stats.
+	rss = get_mem_stats(&mem_stats)->resident;
+	printf("[statm] after unmap/rss=%d (%+4d)\n",
+	       rss, rss - prev_rss);
 	get_smaps_stats(&stats);
-	print_smaps_stats("after unmap", &stats, &prev_stats);
+	print_smaps_stats("[smap]  after unmap", &stats, &prev_stats);
+	get_smaps_rollup(&rollup_stats);
+	print_smaps_entry("[smapr] after unmap", &rollup_stats, &prev_rollup_stats);
+	prev_rollup_stats = rollup_stats;
 }
 
 int main(void)
