@@ -6,8 +6,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-// Simply mmap() and munmap() `size` bytes of memory and output changes in data
-// page counts.
+// Simply mmap() and munmap() `size` bytes of memory and output memory stats
+// before and after each.
 static void simple_mmap(size_t size)
 {
 	const size_t page_size = getpagesize();
