@@ -13,9 +13,12 @@ static void simple_mmap(size_t size)
 	struct smaps_entry entry;
 
 	const size_t page_size = getpagesize();
+	const size_t page_aligned_bytes = ALIGN_UP(size, page_size);
+	const size_t num_pages = page_aligned_bytes / page_size;
+	const size_t num_kib = page_aligned_bytes / 1024;
 
-	printf("\n[mapping/unmapping %lu bytes (%lu pages)]\n\n", size,
-	       ALIGN_UP(size, page_size) / 4096);
+	printf("\n[mapping/unmapping %lu bytes (%lu pages, %lu KiB)]\n\n", size,
+	       num_pages, num_kib);
 
 	get_smaps_rollup(&entry);
 	print_smaps_entry("before alloc", &entry, NULL);
