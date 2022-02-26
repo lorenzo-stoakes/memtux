@@ -107,33 +107,42 @@ struct smaps_entry *get_smaps_rollup(struct smaps_entry *stats)
 	return stats;
 }
 
-void print_rss_stats(const char *prefix, bool show_delta)
+void print_smaps_entry(const char *prefix,
+		       const struct smaps_entry *entry,
+		       const struct smaps_entry *prev_entry)
 {
-	// Not thread-safe.
-	static int prev_rss = -1;
-	static int prev_smaps_rss = -1;
+	if (prefix != NULL)
+		printf("%s:\n", prefix);
 
-	printf("\t%s: ", prefix);
+#define PRINT_FIELD(_field)                                               \
+	if (entry->_field > 0 && (prev_entry == NULL ||                   \
+				  entry->_field != prev_entry->_field)) { \
+		printf("\t");                                             \
+		if (prev_entry != NULL)                                   \
+			printf("(%+4d) ",                                 \
+			       entry->_field - prev_entry->_field);       \
+		printf(#_field "=%d\n", entry->_field);                   \
+	}
 
-	struct mem_stats stats;
-	int rss = get_mem_stats(&stats)->resident;
-	printf("rss=%d", rss);
-	if (show_delta && prev_rss >= 0)
-		printf(" (% 4d), ", rss - prev_rss);
-	else
-		printf(",        ");
-
-	struct smaps_entry smaps_stats;
-	int smaps_rss = get_smaps_rollup(&smaps_stats)->rss;
-	smaps_rss *= 1024;          // -> bytes
-	smaps_rss /= getpagesize(); // -> pages
-	printf("smaps_rss=%d", smaps_rss);
-
-	if (show_delta && prev_smaps_rss >= 0)
-		printf(" (% 4d)", smaps_rss - prev_smaps_rss);
-
-	printf("\n");
-
-	prev_rss = rss;
-	prev_smaps_rss = smaps_rss;
+	PRINT_FIELD(rss);
+	PRINT_FIELD(pss);
+	PRINT_FIELD(pss_anon);
+	PRINT_FIELD(pss_file);
+	PRINT_FIELD(pss_shmem);
+	PRINT_FIELD(shared_clean);
+	PRINT_FIELD(shared_dirty);
+	PRINT_FIELD(private_clean);
+	PRINT_FIELD(private_dirty);
+	PRINT_FIELD(referenced);
+	PRINT_FIELD(anonymous);
+	PRINT_FIELD(lazy_free);
+	PRINT_FIELD(anon_huge_pages);
+	PRINT_FIELD(shmem_pmd_mapped);
+	PRINT_FIELD(file_pmd_mapped);
+	PRINT_FIELD(shared_hugetlb);
+	PRINT_FIELD(private_hugetlb);
+	PRINT_FIELD(swap);
+	PRINT_FIELD(swap_pss);
+	PRINT_FIELD(locked);
+#undef PRINT_FIELD
 }

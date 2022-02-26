@@ -50,6 +50,9 @@ struct smaps_entry *get_smaps_rollup(struct smaps_entry *stats);
 // Retrieve rolled up smaps RSS value in pages.
 int get_smaps_rss_pages(void);
 
-// Print out statm and smaps_rollup RSS values and determine the delta for
-// each. NOT thread-safe.
-void print_rss_stats(const char *prefix, bool show_delta);
+// Print out all non-zero fields in smaps entry and optionally show delta from
+// previous entry values if `prev_entry` is non-null. It optionally shows
+// `prefix` on the line above if non-null.
+void print_smaps_entry(const char *prefix,
+		       const struct smaps_entry *entry,
+		       const struct smaps_entry *prev_entry);
