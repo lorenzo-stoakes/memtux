@@ -20,7 +20,6 @@ static void simple_mmap(size_t size)
 
 	struct smaps_stats stats;
 	get_smaps_stats(&stats);
-	print_smaps_stats("before alloc", &stats, NULL);
 	struct smaps_stats prev_stats = stats;
 
 	uint *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
