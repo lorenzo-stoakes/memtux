@@ -49,6 +49,7 @@ static struct mem_stats *get_mem_stats(struct mem_stats *stats)
 	return stats;
 }
 
+// Retrieve rolled up smaps RSS value in pages.
 static int get_smaps_rss_pages(void)
 {
 	FILE *fp = fopen("/proc/self/smaps_rollup", "r");
@@ -77,6 +78,8 @@ static int get_smaps_rss_pages(void)
 	return ret;
 }
 
+// Print out statm and smaps_rollup values and determine the delta for each. NOT
+// thread-safe.
 static void print_stats(const char *prefix, bool show_delta)
 {
 	// Not thread-safe.
