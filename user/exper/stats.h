@@ -40,6 +40,11 @@ struct smaps_entry {
 	int locked;           // Is the mapping locked in memory?
 };
 
+// Represents smaps statistics aggregated by different type of allocation.
+struct smaps_stats {
+	struct smaps_entry stack, heap, anonymous, file, other;
+};
+
 // Retrieve memory stats for current process and place in `stats`. Returns stats
 // struct for convenience.
 struct mem_stats *get_mem_stats(struct mem_stats *stats);
@@ -47,8 +52,8 @@ struct mem_stats *get_mem_stats(struct mem_stats *stats);
 // Retrieve rolled up smaps statistics.
 struct smaps_entry *get_smaps_rollup(struct smaps_entry *stats);
 
-// Retrieve rolled up smaps RSS value in pages.
-int get_smaps_rss_pages(void);
+// Retrieve smaps statistics aggregated by type of allocation.
+struct smaps_stats *get_smaps_stats(struct smaps_stats *stats);
 
 // Print out all non-zero fields in smaps entry and optionally show delta from
 // previous entry values if `prev_entry` is non-null. It optionally shows
@@ -56,3 +61,9 @@ int get_smaps_rss_pages(void);
 void print_smaps_entry(const char *prefix,
 		       const struct smaps_entry *entry,
 		       const struct smaps_entry *prev_entry);
+
+// Print out aggregated smaps statistics by mapping type. Parameters similar to
+// print_smaps_entry().
+void print_smaps_stats(const char *prefix,
+		       const struct smaps_stats *stats,
+		       const struct smaps_stats *prev_stats);

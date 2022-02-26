@@ -10,8 +10,6 @@
 // before and after each.
 static void simple_mmap(size_t size)
 {
-	struct smaps_entry entry;
-
 	const size_t page_size = getpagesize();
 	const size_t page_aligned_bytes = ALIGN_UP(size, page_size);
 	const size_t num_pages = page_aligned_bytes / page_size;
@@ -20,9 +18,10 @@ static void simple_mmap(size_t size)
 	printf("\n[mapping/unmapping %lu bytes (%lu pages, %lu KiB)]\n\n", size,
 	       num_pages, num_kib);
 
-	get_smaps_rollup(&entry);
-	print_smaps_entry("before alloc", &entry, NULL);
-	struct smaps_entry prev_entry = entry;
+	struct smaps_stats stats;
+	get_smaps_stats(&stats);
+	print_smaps_stats("before alloc", &stats, NULL);
+	struct smaps_stats prev_stats = stats;
 
 	uint *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE,
@@ -31,16 +30,16 @@ static void simple_mmap(size_t size)
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
-	get_smaps_rollup(&entry);
-	print_smaps_entry("after alloc", &entry, &prev_entry);
-	prev_entry = entry;
+	get_smaps_stats(&stats);
+	print_smaps_stats("after alloc", &stats, &prev_stats);
+	prev_stats = stats;
 
 	if (munmap(addr, size)) {
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
-	get_smaps_rollup(&entry);
-	print_smaps_entry("after unmap", &entry, &prev_entry);
+	get_smaps_stats(&stats);
+	print_smaps_stats("after unmap", &stats, &prev_stats);
 }
 
 int main(void)

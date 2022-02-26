@@ -28,9 +28,9 @@ struct mem_stats *get_mem_stats(struct mem_stats *stats)
 // otherwise returns true.
 static bool parse_smaps_field(const char *buf, struct smaps_entry *stats)
 {
-	char prefix[256];
-	int val;
-	char kb[256];
+	char prefix[256] = "";
+	int val = 0;
+	char kb[256] = "";
 
 	if (sscanf(buf, "%s %d %s", prefix, &val, kb) == EOF ||
 	    strcmp(kb, "kB") != 0)
@@ -107,6 +107,76 @@ struct smaps_entry *get_smaps_rollup(struct smaps_entry *stats)
 	return stats;
 }
 
+// Determine which smaps_entry to target in an smaps_stats object based on
+// header line. Mutates `header` string.
+static struct smaps_entry *get_target_entry(char *header,
+					    struct smaps_stats *stats)
+{
+	const size_t len = strlen(header);
+
+	// Find first space from right hand side to identify the memory.
+	ssize_t i = len - 1;
+	for (; i >= 0 && header[i] != ' '; i--)
+		;
+
+	// We should never run off the start.
+	if (i < 0) {
+		fprintf(stderr, "Cannot parse header line: %s\n", header);
+		exit(EXIT_FAILURE);
+	}
+
+	const char start = header[i + 1];
+	if (start == '[') {
+		// Mapping defined by its type.
+
+		header[len - 2] = '\0'; // Clear out other ']'.
+		const char *type = &header[i + 2]; // Skip " [".
+
+		if (strcmp(type, "stack") == 0)
+			return &stats->stack;
+		if (strcmp(type, "heap") == 0)
+			return &stats->heap;
+
+		return &stats->other;
+	} else if (start == '/') {
+		// File mapping.
+		return &stats->file;
+	}
+
+	// Anonymous mapping.
+	return &stats->anonymous;
+}
+
+struct smaps_stats *get_smaps_stats(struct smaps_stats *stats)
+{
+	// Reset stats to zero.
+	memset(stats, 0, sizeof(*stats));
+
+	FILE *fp = fopen("/proc/self/smaps", "r");
+
+	if (fp == NULL) {
+		fprintf(stderr, "Cannot open smaps file.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	char line[256];
+	if (fgets(line, sizeof(line), fp) == NULL) {
+		fprintf(stderr, "Cannot read header.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	struct smaps_entry *entry = get_target_entry(line, stats);
+	while (fgets(line, sizeof(line), fp) != NULL) {
+		// Header line.
+		if (!parse_smaps_field(line, entry))
+			entry = get_target_entry(line, stats);
+	}
+
+	fclose(fp);
+
+	return stats;
+}
+
 void print_smaps_entry(const char *prefix,
 		       const struct smaps_entry *entry,
 		       const struct smaps_entry *prev_entry)
@@ -145,4 +215,24 @@ void print_smaps_entry(const char *prefix,
 	PRINT_FIELD(swap_pss);
 	PRINT_FIELD(locked);
 #undef PRINT_FIELD
+}
+
+void print_smaps_stats(const char *prefix,
+		       const struct smaps_stats *stats,
+		       const struct smaps_stats *prev_stats)
+{
+	char new_prefix[256];
+
+#define PRINT_ALLOC_TYPE(_type)                                            \
+	strncpy(new_prefix, prefix, sizeof(new_prefix));                   \
+	strcat(new_prefix, "/" #_type);                                    \
+	print_smaps_entry(new_prefix, &stats->_type,                       \
+			  prev_stats == NULL ? NULL : &prev_stats->_type);
+
+	PRINT_ALLOC_TYPE(stack);
+	PRINT_ALLOC_TYPE(heap);
+	PRINT_ALLOC_TYPE(anonymous);
+	PRINT_ALLOC_TYPE(file);
+	PRINT_ALLOC_TYPE(other);
+#undef PRINT_ALLOC_TYPE
 }
