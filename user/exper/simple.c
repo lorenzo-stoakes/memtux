@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,39 +49,86 @@ static struct mem_stats *get_mem_stats(struct mem_stats *stats)
 	return stats;
 }
 
+static int get_smaps_rss_pages(void)
+{
+	FILE *fp = fopen("/proc/self/smaps_rollup", "r");
+
+	if (fp == NULL) {
+		fprintf(stderr, "Cannot open smaps_rollup file.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	// Skip first line.
+	char dummy[256];
+	if (fgets(dummy, sizeof(dummy), fp) == NULL) {
+		fprintf(stderr, "Cannot read first line.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	int ret = 0;
+	fscanf(fp, "%s %d", dummy, &ret);
+
+	fclose(fp);
+
+	// Output as kilobytes so convert to pages.
+	ret *= 1024;
+	ret /= getpagesize();
+
+	return ret;
+}
+
+static void print_stats(const char *prefix, bool show_delta)
+{
+	// Not thread-safe.
+	static int prev_rss = -1;
+	static int prev_smaps_rss = -1;
+
+	printf("\t%s: ", prefix);
+
+	struct mem_stats stats;
+	int rss = get_mem_stats(&stats)->resident;
+	printf("rss=%d", rss);
+	if (show_delta && prev_rss >= 0)
+		printf(" (% 4d), ", rss - prev_rss);
+	else
+		printf(",        ");
+
+	int smaps_rss = get_smaps_rss_pages();
+	printf("smaps_rss=%d", smaps_rss);
+
+	if (show_delta && prev_smaps_rss >= 0)
+		printf(" (% 4d)", smaps_rss - prev_smaps_rss);
+
+	printf("\n");
+
+	prev_rss = rss;
+	prev_smaps_rss = smaps_rss;
+}
+
 // Simply mmap() and munmap() `size` bytes of memory and output changes in data
 // page counts.
 static void simple_mmap(size_t size)
 {
 	const size_t page_size = getpagesize();
 
-	printf("mapping/unmapping %lu bytes (%lu pages)\n", size,
+	printf("mapping/unmapping %lu bytes (%lu pages):\n", size,
 	       ALIGN_UP(size, page_size) / 4096);
 
-	struct mem_stats stats;
-	int drs = get_mem_stats(&stats)->drs;
-
+	print_stats("before alloc", false);
 	uint *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE,
 			  -1, 0);
-
 	if (addr == MAP_FAILED) {
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
-
-	int prev_drs = drs;
-	drs = get_mem_stats(&stats)->drs;
-	printf("after   mmap drs += %d, ", drs - prev_drs);
+	print_stats(" after alloc", true);
 
 	if (munmap(addr, size)) {
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
-
-	prev_drs = drs;
-	drs = get_mem_stats(&stats)->drs;
-	printf("after munmap drs -= %d\n", prev_drs - drs);
+	print_stats(" after unmap", true);
 }
 
 int main(void)
