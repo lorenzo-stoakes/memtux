@@ -1,6 +1,6 @@
 all: simple
 
-simple: simple.c Makefile
+simple: macros.h simple.c Makefile
 	gcc --std=gnu2x -Wall -Wextra -g simple.c -o simple
 
 clean:
