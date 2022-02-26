@@ -23,7 +23,7 @@ struct mem_stats *get_mem_stats(struct mem_stats *stats)
 	return stats;
 }
 
-// Attempt to parse smaps field from `buf` and place in appropriate field in
+// Attempt to parse smaps field from `buf` and add them to appropriate field in
 // `stats`. If the format is not as expected or unable to parse, returns false,
 // otherwise returns true.
 static bool parse_smaps_field(const char *buf, struct smaps_entry *stats)
@@ -37,9 +37,9 @@ static bool parse_smaps_field(const char *buf, struct smaps_entry *stats)
 		return false;
 
 #define GET_VALUE(_key, _field)                    \
-	if (strcmp(prefix, #_key ":") == 0) {	   \
-		stats->_field = val;		   \
-		return true;			   \
+	if (strcmp(prefix, #_key ":") == 0) {      \
+		stats->_field += val;              \
+		return true;                       \
 	}
 
 	GET_VALUE(Rss, rss);
