@@ -181,12 +181,15 @@ void print_smaps_entry(const char *prefix,
 		       const struct smaps_entry *entry,
 		       const struct smaps_entry *prev_entry)
 {
-	if (prefix != NULL)
-		printf("%s:\n", prefix);
+	bool printed_prefix = false;
 
 #define PRINT_FIELD(_field)                                               \
 	if (entry->_field > 0 && (prev_entry == NULL ||                   \
 				  entry->_field != prev_entry->_field)) { \
+		if (!printed_prefix && prefix != NULL) {                  \
+			printf("%s:\n", prefix);                          \
+			printed_prefix = true;                            \
+		}                                                         \
 		printf("\t");                                             \
 		if (prev_entry != NULL)                                   \
 			printf("(%+4d) ",                                 \
