@@ -15,7 +15,8 @@ static void simple_mmap(size_t size)
 	printf("mapping/unmapping %lu bytes (%lu pages):\n", size,
 	       ALIGN_UP(size, page_size) / 4096);
 
-	print_stats("before alloc", false);
+	print_rss_stats("before alloc", false);
+
 	uint *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE,
 			  -1, 0);
@@ -23,13 +24,13 @@ static void simple_mmap(size_t size)
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
-	print_stats(" after alloc", true);
+	print_rss_stats(" after alloc", true);
 
 	if (munmap(addr, size)) {
 		perror("simple/exper");
 		exit(EXIT_FAILURE);
 	}
-	print_stats(" after unmap", true);
+	print_rss_stats(" after unmap", true);
 }
 
 int main(void)
