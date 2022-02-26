@@ -1,101 +1,10 @@
 #include "macros.h"
+#include "stats.h"
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
-// Represents process memory statistics obtained from /proc/[pid]/statm.
-struct mem_stats {
-	int size;     // Program size in pages.
-	int resident; // Number of resident pages.
-	int shared;   // Number of shared pages.
-	int trs;      // Number of 'code' pages.
-	int lrs;      // Number of 'library' pages.
-	int drs;      // Number of 'data/stack' pages.
-	int dt;       // Number of dirty pages.
-};
-
-// Retrieve memory stats for current process and place in `stats`. Returns stats
-// struct for convenience.
-static struct mem_stats *get_mem_stats(struct mem_stats *stats)
-{
-	FILE *fp = fopen("/proc/self/statm", "r");
-
-	if (fp == NULL) {
-		fprintf(stderr, "Cannot open statm file.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	fscanf(fp, "%d %d %d %d %d %d %d",
-	       &stats->size, &stats->resident, &stats->shared, &stats->trs,
-	       &stats->lrs, &stats->drs, &stats->dt);
-
-	fclose(fp);
-
-	return stats;
-}
-
-// Retrieve rolled up smaps RSS value in pages.
-static int get_smaps_rss_pages(void)
-{
-	FILE *fp = fopen("/proc/self/smaps_rollup", "r");
-
-	if (fp == NULL) {
-		fprintf(stderr, "Cannot open smaps_rollup file.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	// Skip first line.
-	char dummy[256];
-	if (fgets(dummy, sizeof(dummy), fp) == NULL) {
-		fprintf(stderr, "Cannot read first line.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	int ret = 0;
-	fscanf(fp, "%s %d", dummy, &ret);
-
-	fclose(fp);
-
-	// Output as kilobytes so convert to pages.
-	ret *= 1024;
-	ret /= getpagesize();
-
-	return ret;
-}
-
-// Print out statm and smaps_rollup values and determine the delta for each. NOT
-// thread-safe.
-static void print_stats(const char *prefix, bool show_delta)
-{
-	// Not thread-safe.
-	static int prev_rss = -1;
-	static int prev_smaps_rss = -1;
-
-	printf("\t%s: ", prefix);
-
-	struct mem_stats stats;
-	int rss = get_mem_stats(&stats)->resident;
-	printf("rss=%d", rss);
-	if (show_delta && prev_rss >= 0)
-		printf(" (% 4d), ", rss - prev_rss);
-	else
-		printf(",        ");
-
-	int smaps_rss = get_smaps_rss_pages();
-	printf("smaps_rss=%d", smaps_rss);
-
-	if (show_delta && prev_smaps_rss >= 0)
-		printf(" (% 4d)", smaps_rss - prev_smaps_rss);
-
-	printf("\n");
-
-	prev_rss = rss;
-	prev_smaps_rss = smaps_rss;
-}
 
 // Simply mmap() and munmap() `size` bytes of memory and output changes in data
 // page counts.
